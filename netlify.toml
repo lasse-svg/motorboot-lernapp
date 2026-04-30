@@ -1,0 +1,25 @@
+# Netlify config — sane caching for a static site.
+[build]
+  publish = "."
+
+# Long-cache for fingerprintable static assets that don't change often
+[[headers]]
+  for = "/css/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/js/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/data/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+# Always re-fetch the entry HTML so updates are visible immediately
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "no-cache"

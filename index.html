@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a3d62">
+  <title>Ahoi! · Motorboot-Lernapp</title>
+  <meta name="description" content="Lerne den Sportbootführerschein Binnen mit allen 253 offiziellen Fragen. Quiz, Prüfungssimulation, Fortschritts-Tracking und Crew-Vergleich mit Freunden.">
+
+  <!-- Open Graph / Social previews -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Ahoi! — Motorboot-Lernapp">
+  <meta property="og:description" content="Sportbootführerschein Binnen lernen mit Freunden. 253 Fragen, Prüfungssimulation, Crew-Bestenliste.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Ahoi! — Motorboot-Lernapp">
+  <meta name="twitter:description" content="Sportbootführerschein Binnen lernen mit Freunden. 253 Fragen, Prüfungssimulation, Crew-Bestenliste.">
+
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E⚓%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+
+  <!-- Animated wave background -->
+  <div class="ocean">
+    <div class="wave wave-1"></div>
+    <div class="wave wave-2"></div>
+    <div class="wave wave-3"></div>
+  </div>
+
+  <!-- Top bar with profile/XP/streak -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand" data-action="goto" data-view="home">
+        <span class="anchor">⚓</span>
+        <span class="brand-text">Ahoi!<small>Motorboot-Lernapp</small></span>
+      </div>
+      <div class="hud">
+        <div class="hud-item" id="hud-streak" title="Tagesstreak">
+          <span class="hud-icon">🔥</span>
+          <span class="hud-value" id="streak-count">0</span>
+        </div>
+        <div class="hud-item" id="hud-xp" title="Erfahrungspunkte">
+          <span class="hud-icon">⭐</span>
+          <span class="hud-value" id="xp-count">0</span>
+        </div>
+        <div class="hud-item rank" id="hud-rank" title="Aktueller Rang">
+          <span class="hud-icon" id="rank-emoji">🦦</span>
+          <div class="rank-info">
+            <span class="rank-name" id="rank-name">Landratte</span>
+            <div class="rank-bar"><div class="rank-bar-fill" id="rank-bar-fill"></div></div>
+          </div>
+        </div>
+        <button class="btn btn-ghost" data-action="goto" data-view="profile" title="Profil">
+          <span id="profile-avatar">🚤</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- ==================== HOME ==================== -->
+    <section class="view" id="view-home" data-view="home">
+
+      <!-- Onboarding (first launch) -->
+      <div class="onboarding hidden" id="onboarding">
+        <div class="onboarding-card">
+          <div class="onboarding-emoji">⚓</div>
+          <h1>Willkommen an Bord!</h1>
+          <p class="lead">Lege deine Crew-Identität fest. Damit kannst du später Fortschritt mit Freunden teilen.</p>
+          <label>Dein Name oder Spitzname
+            <input type="text" id="onboard-name" maxlength="24" placeholder="z. B. Käpt'n Jonas">
+          </label>
+          <label>Wähle deinen Avatar
+            <div class="avatar-picker" id="onboard-avatars">
+              <button data-avatar="🚤">🚤</button>
+              <button data-avatar="⛵">⛵</button>
+              <button data-avatar="🛥️">🛥️</button>
+              <button data-avatar="🛶">🛶</button>
+              <button data-avatar="🦦">🦦</button>
+              <button data-avatar="🐬">🐬</button>
+              <button data-avatar="🦈">🦈</button>
+              <button data-avatar="🦞">🦞</button>
+              <button data-avatar="🐙">🐙</button>
+              <button data-avatar="🦭">🦭</button>
+              <button data-avatar="🐢">🐢</button>
+              <button data-avatar="🦅">🦅</button>
+            </div>
+          </label>
+          <button class="btn btn-primary btn-lg" id="onboard-start">Leinen los! 🚀</button>
+        </div>
+      </div>
+
+      <!-- Daily mission banner -->
+      <div class="daily-mission" id="daily-mission">
+        <div class="dm-icon">🎯</div>
+        <div class="dm-info">
+          <div class="dm-title">Tägliche Mission</div>
+          <div class="dm-desc" id="dm-desc">10 Fragen heute beantworten</div>
+          <div class="dm-bar"><div class="dm-bar-fill" id="dm-bar-fill"></div></div>
+        </div>
+        <div class="dm-reward">+50 ⭐</div>
+      </div>
+
+      <!-- Mode tiles -->
+      <div class="tiles">
+        <button class="tile tile-quiz" data-action="goto" data-view="quiz">
+          <div class="tile-icon">🎲</div>
+          <div class="tile-title">Quick-Quiz</div>
+          <div class="tile-desc">10 Fragen, schnell zwischendurch.</div>
+        </button>
+        <button class="tile tile-learn" data-action="goto" data-view="learn">
+          <div class="tile-icon">📚</div>
+          <div class="tile-title">Lernmodus</div>
+          <div class="tile-desc">Themen üben, Karteikarten, Wiederholung.</div>
+        </button>
+        <button class="tile tile-exam" data-action="goto" data-view="exam-prep">
+          <div class="tile-icon">🎓</div>
+          <div class="tile-title">Prüfungsmodus</div>
+          <div class="tile-desc">30 Fragen, 27 zum Bestehen, Timer.</div>
+        </button>
+        <button class="tile tile-sheets" data-action="goto" data-view="sheets">
+          <div class="tile-icon">📋</div>
+          <div class="tile-title">15 Fragebögen</div>
+          <div class="tile-desc">Wie in der Prüfung — feste Bögen.</div>
+        </button>
+        <button class="tile tile-difficult" data-action="goto" data-view="difficult">
+          <div class="tile-icon">🌊</div>
+          <div class="tile-title">Schwierige Fragen</div>
+          <div class="tile-desc">Was du oft falsch hast — dranbleiben.</div>
+        </button>
+        <button class="tile tile-crew" data-action="goto" data-view="crew">
+          <div class="tile-icon">👥</div>
+          <div class="tile-title">Crew</div>
+          <div class="tile-desc">Mit Freunden lernen & vergleichen.</div>
+        </button>
+      </div>
+
+      <!-- Stats summary -->
+      <div class="stats-summary" id="stats-summary">
+        <div class="stat">
+          <div class="stat-value" id="stat-answered">0</div>
+          <div class="stat-label">Fragen beantwortet</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="stat-correct">0%</div>
+          <div class="stat-label">Trefferquote</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="stat-mastered">0/253</div>
+          <div class="stat-label">Beherrscht</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="stat-badges">0</div>
+          <div class="stat-label">Errungenschaften</div>
+        </div>
+      </div>
+
+      <!-- Crew preview / Achievements preview -->
+      <div class="home-bottom">
+        <div class="crew-preview card">
+          <div class="card-head">
+            <h3>👥 Crew-Bestenliste</h3>
+            <button class="link" data-action="goto" data-view="crew">Alle anzeigen →</button>
+          </div>
+          <div id="crew-preview-list" class="crew-list-mini"></div>
+        </div>
+        <div class="badges-preview card">
+          <div class="card-head">
+            <h3>🏆 Letzte Errungenschaften</h3>
+            <button class="link" data-action="goto" data-view="badges">Alle anzeigen →</button>
+          </div>
+          <div id="badges-preview-list" class="badges-list-mini"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== QUIZ (active session) ==================== -->
+    <section class="view hidden" id="view-quiz" data-view="quiz">
+      <div class="quiz-header">
+        <button class="btn btn-ghost btn-back" data-action="quiz-quit">← Beenden</button>
+        <div class="quiz-title" id="quiz-title">Quick-Quiz</div>
+        <div class="quiz-progress">
+          <span id="quiz-current">1</span> / <span id="quiz-total">10</span>
+        </div>
+        <div class="quiz-timer hidden" id="quiz-timer">⏱ <span id="quiz-time">60:00</span></div>
+      </div>
+      <div class="quiz-bar"><div class="quiz-bar-fill" id="quiz-bar-fill"></div></div>
+
+      <div class="question-card" id="question-card">
+        <div class="q-meta">
+          <span class="q-section" id="q-section">Basis</span>
+          <span class="q-id" id="q-id">Frage 1</span>
+          <button class="bookmark-btn" id="bookmark-btn" title="Markieren">☆</button>
+        </div>
+        <div class="q-text" id="q-text">…</div>
+        <div class="q-answers" id="q-answers"></div>
+        <div class="q-feedback hidden" id="q-feedback">
+          <div class="q-feedback-text" id="q-feedback-text"></div>
+          <button class="btn btn-primary" id="q-next">Weiter →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== LEARN (topic picker) ==================== -->
+    <section class="view hidden" id="view-learn" data-view="learn">
+      <div class="view-header">
+        <button class="btn btn-ghost btn-back" data-action="goto" data-view="home">← Zurück</button>
+        <h2>📚 Lernmodus</h2>
+        <p class="lead">Wähle einen Themenbereich. Falsch beantwortete Fragen kommen häufiger zurück.</p>
+      </div>
+      <div class="topic-grid" id="topic-grid"></div>
+    </section>
+
+    <!-- ==================== EXAM PREP ==================== -->
+    <section class="view hidden" id="view-exam-prep" data-view="exam-prep">
+      <div class="view-header">
+        <button class="btn btn-ghost btn-back" data-action="goto" data-view="home">← Zurück</button>
+        <h2>🎓 Prüfungssimulation</h2>
+        <p class="lead">30 Fragen wie in der echten Prüfung: 7 Basis + 23 Binnen. 27 von 30 zum Bestehen. Zeit: 60 Minuten.</p>
+      </div>
+      <div class="exam-info card">
+        <h3>So läuft die Prüfung ab</h3>
+        <ul>
+          <li>30 Multiple-Choice-Fragen</li>
+          <li>Du musst <strong>27 von 30</strong> richtig haben (90 %)</li>
+          <li>Im echten Test darf eine Frage falsch sein, in zwei aus jedem Thema je eine</li>
+          <li>Antworten werden zufällig angeordnet</li>
+          <li>Auflösung erst am Ende</li>
+        </ul>
+        <button class="btn btn-primary btn-lg" data-action="start-exam">Prüfung starten 🎓</button>
+      </div>
+    </section>
+
+    <!-- ==================== 15 SHEETS ==================== -->
+    <section class="view hidden" id="view-sheets" data-view="sheets">
+      <div class="view-header">
+        <button class="btn btn-ghost btn-back" data-action="goto" data-view="home">← Zurück</button>
+        <h2>📋 15 Fragebögen</h2>
+        <p class="lead">15 deterministische Übungsbögen — jede der 253 Fragen ist mehrfach verteilt, jeder Bogen hat 30 Fragen wie in der Prüfung.</p>
+      </div>
+      <div class="sheets-grid" id="sheets-grid"></div>
+    </section>
+
+    <!-- ==================== DIFFICULT ==================== -->
+    <section class="view hidden" id="view-difficult" data-view="difficult">
+      <div class="view-header">
+        <button class="btn btn-ghost btn-back" data-action="goto" data-view="home">← Zurück</button>
+        <h2>🌊 Schwierige Fragen</h2>
+        <p class="lead">Fragen, die du oft falsch beantwortet oder noch nicht gemeistert hast.</p>
+      </div>
+      <div id="difficult-list"></div>
+      <div class="difficult-actions">
+        <button class="btn btn-primary btn-lg" data-action="start-difficult">Schwierige Fragen jetzt üben →</button>
+      </div>
+    </section>
+
+    <!-- ==================== RESULT ==================== -->
+    <section class="view hidden" id="view-result" data-view="result">
+      <div class="result-card">
+        <div class="result-hero" id="result-hero">
+          <div class="result-emoji" id="result-emoji">🎉</div>
+          <h2 id="result-title">Klasse!</h2>
+          <p id="result-subtitle">…</p>
+        </div>
+        <div class="result-stats">
+          <div class="result-stat"><div class="rs-value" id="result-correct">0</div><div class="rs-label">Richtig</div></div>
+          <div class="result-stat"><div class="rs-value" id="result-wrong">0</div><div class="rs-label">Falsch</div></div>
+          <div class="result-stat"><div class="rs-value" id="result-percent">0%</div><div class="rs-label">Quote</div></div>
+          <div class="result-stat"><div class="rs-value" id="result-xp">+0</div><div class="rs-label">XP</div></div>
+        </div>
+        <div class="result-badges hidden" id="result-badges"></div>
+        <div class="result-actions">
+          <button class="btn btn-ghost" data-action="result-review">Falsche durchgehen</button>
+          <button class="btn btn-primary" data-action="goto" data-view="home">Zur Startseite</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== CREW ==================== -->
+    <section class="view hidden" id="view-crew" data-view="crew">
+      <div class="view-header">
+        <button class="btn btn-ghost btn-back" data-action="goto" data-view="home">← Zurück</button>
+        <h2>👥 Deine Crew</h2>
+        <p class="lead">Tauscht Profil-Codes, vergleicht Stats, lernt zusammen.</p>
+      </div>
+
+      <div class="crew-actions card">
+        <div class="ca-block">
+          <h3>🚀 Deinen Code teilen</h3>
+          <p>Teile diesen Code mit Freunden, damit sie deinen Fortschritt sehen.</p>
+          <div class="code-row">
+            <input type="text" id="my-share-code" readonly>
+            <button class="btn btn-primary" data-action="copy-code">📋 Kopieren</button>
+          </div>
+          <div class="share-extra">
+            <button class="btn btn-ghost" data-action="share-link">🔗 Als Link teilen</button>
+            <button class="btn btn-ghost" data-action="show-qr">📱 Als QR-Code</button>
+          </div>
+        </div>
+        <div class="ca-block">
+          <h3>➕ Crewmitglied hinzufügen</h3>
+          <p>Füge den Code eines Freundes ein:</p>
+          <div class="code-row">
+            <input type="text" id="add-code-input" placeholder="ahoi:...">
+            <button class="btn btn-primary" data-action="add-crew">Hinzufügen</button>
+          </div>
+          <div class="error-msg hidden" id="add-crew-error"></div>
+        </div>
+      </div>
+
+      <div class="leaderboard card">
+        <h3>🏆 Bestenliste</h3>
+        <div class="leaderboard-tabs">
+          <button class="lb-tab active" data-lb="xp">⭐ XP</button>
+          <button class="lb-tab" data-lb="streak">🔥 Streak</button>
+          <button class="lb-tab" data-lb="mastered">⚓ Beherrscht</button>
+          <button class="lb-tab" data-lb="badges">🏅 Badges</button>
+        </div>
+        <div id="leaderboard-list" class="leaderboard-list"></div>
+      </div>
+    </section>
+
+    <!-- ==================== PROFILE ==================== -->
+    <section class="view hidden" id="view-profile" data-view="profile">
+      <div class="view-header">
+        <button class="btn btn-ghost btn-back" data-action="goto" data-view="home">← Zurück</button>
+        <h2>👤 Profil</h2>
+      </div>
+      <div class="profile-card card">
+        <div class="profile-head">
+          <div class="profile-avatar-big" id="profile-avatar-big">🚤</div>
+          <div>
+            <div class="profile-name" id="profile-name">…</div>
+            <div class="profile-rank" id="profile-rank">…</div>
+          </div>
+        </div>
+        <div class="profile-edit">
+          <label>Name <input id="edit-name" type="text" maxlength="24"></label>
+          <label>Avatar
+            <div class="avatar-picker" id="edit-avatars"></div>
+          </label>
+          <button class="btn btn-primary" data-action="save-profile">Speichern</button>
+        </div>
+      </div>
+
+      <div class="profile-card card">
+        <h3>📊 Detaillierte Statistik</h3>
+        <div id="topic-stats"></div>
+      </div>
+
+      <div class="profile-card card danger-zone">
+        <h3>⚠️ Reset</h3>
+        <p>Löscht deinen Lernfortschritt komplett (Crew bleibt).</p>
+        <button class="btn btn-danger" data-action="reset-progress">Fortschritt zurücksetzen</button>
+      </div>
+    </section>
+
+    <!-- ==================== BADGES ==================== -->
+    <section class="view hidden" id="view-badges" data-view="badges">
+      <div class="view-header">
+        <button class="btn btn-ghost btn-back" data-action="goto" data-view="home">← Zurück</button>
+        <h2>🏆 Errungenschaften</h2>
+        <p class="lead">Sammle alle Auszeichnungen auf deinem Weg zum Käpt'n.</p>
+      </div>
+      <div id="badges-grid" class="badges-grid"></div>
+    </section>
+  </main>
+
+  <!-- Toast notification -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Confetti / celebration overlay -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <!-- QR modal -->
+  <div class="modal hidden" id="qr-modal">
+    <div class="modal-content">
+      <h3>📱 Profil-QR-Code</h3>
+      <div id="qr-canvas-wrap"></div>
+      <p class="muted">Lass deine Freunde diesen Code scannen.</p>
+      <button class="btn btn-primary" data-action="close-modal">Schließen</button>
+    </div>
+  </div>
+
+  <!-- Scripts: order matters (questions first, then logic) -->
+  <script src="data/questions.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/badges.js"></script>
+  <script src="js/sheets.js"></script>
+  <script src="js/quiz.js"></script>
+  <script src="js/crew.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
