@@ -54,6 +54,18 @@ const UI = (() => {
     $("#rank-name").textContent = r.current.name;
     $("#rank-bar-fill").style.width = (r.progress * 100) + "%";
     $("#profile-avatar").textContent = s.profile.avatar || "🚤";
+
+    // Account button: only show when cloud is enabled
+    const accBtn = $("#btn-account");
+    if (typeof Cloud !== "undefined" && Cloud.enabled && Cloud.enabled()) {
+      accBtn.classList.remove("hidden");
+      const signedIn = Cloud.isSignedIn();
+      accBtn.classList.toggle("signed-in", signedIn);
+      $("#account-icon").textContent = signedIn ? "☁️" : "👤";
+      accBtn.title = signedIn ? `Eingeloggt als ${Cloud.user().email || ""}` : "Anmelden";
+    } else {
+      accBtn.classList.add("hidden");
+    }
   }
 
   function bumpHUD(which) {
@@ -343,18 +355,92 @@ const UI = (() => {
 
   // ---------- Crew view ----------
   let lbMetric = "xp";
+  let lbScope = "global"; // "global" | "friends" (only when signed in)
   function renderCrew() {
     $("#my-share-code").value = Crew.exportCode();
     $("#add-code-input").value = "";
     const errEl = $("#add-crew-error");
     errEl.classList.add("hidden");
+
+    // Add cloud banner once at the top of the crew view
+    const view = document.querySelector('[data-view="crew"]');
+    let banner = view.querySelector(".cloud-banner");
+    if (!banner) {
+      banner = document.createElement("div");
+      banner.className = "cloud-banner";
+      view.querySelector(".view-header").after(banner);
+    }
+    if (Cloud.enabled && Cloud.enabled() && Cloud.isSignedIn()) {
+      banner.className = "cloud-banner";
+      banner.innerHTML = `<span>☁️</span><span>Live-Bestenliste aktiv. Suche Freunde per <strong>@username</strong>.</span>`;
+    } else if (Cloud.enabled && Cloud.enabled()) {
+      banner.className = "cloud-banner local";
+      banner.innerHTML = `<span>👤</span><span>Du lernst lokal. <strong>Anmelden</strong> für Cloud-Sync und Live-Bestenliste.</span><button class="btn btn-primary" data-action="open-account">Anmelden</button>`;
+    } else {
+      banner.remove();
+    }
+
     renderLeaderboard();
   }
 
-  function renderLeaderboard() {
+  async function renderLeaderboard() {
     const list = $("#leaderboard-list");
+    list.innerHTML = `<div class="empty-hint">Lade Bestenliste…</div>`;
+
+    // Inject scope toggle (global vs friends) when signed in
+    const tabs = document.querySelector(".leaderboard-tabs");
+    let scopeRow = document.querySelector(".lb-scope");
+    if (Cloud.enabled && Cloud.enabled() && Cloud.isSignedIn()) {
+      if (!scopeRow) {
+        scopeRow = document.createElement("div");
+        scopeRow.className = "lb-scope";
+        tabs.parentNode.insertBefore(scopeRow, tabs);
+      }
+      scopeRow.innerHTML = `
+        <button class="lb-scope-btn ${lbScope==='global'?'active':''}" data-scope="global">🌍 Global</button>
+        <button class="lb-scope-btn ${lbScope==='friends'?'active':''}" data-scope="friends">👥 Crew</button>`;
+      scopeRow.querySelectorAll(".lb-scope-btn").forEach(b => {
+        b.onclick = () => { lbScope = b.dataset.scope; renderLeaderboard(); };
+      });
+    } else if (scopeRow) {
+      scopeRow.remove();
+    }
+
+    let lb;
+    if (Cloud.enabled && Cloud.enabled() && Cloud.isSignedIn()) {
+      try {
+        const docs = await Cloud.fetchLeaderboard(lbMetric, 50, lbScope);
+        const myUid = Cloud.user().uid;
+        lb = docs.map(d => ({
+          id: d.uid,
+          n: d.name || "Anonym",
+          a: d.avatar || "🚤",
+          x: d.xp || 0,
+          s: d.streak || 0,
+          m: d.mastered || 0,
+          b: d.badges || [],
+          username: d.username || null,
+          isMe: d.uid === myUid,
+          fromCloud: true,
+        }));
+        // Sort client-side by metric
+        const sortField = { xp:"x", streak:"s", mastered:"m" }[lbMetric] || "x";
+        if (lbMetric === "badges") lb.sort((a,b) => (b.b||[]).length - (a.b||[]).length);
+        else lb.sort((a,b) => (b[sortField]||0) - (a[sortField]||0));
+      } catch (e) {
+        console.error(e);
+        list.innerHTML = `<div class="empty-hint">Bestenliste konnte nicht geladen werden.</div>`;
+        return;
+      }
+    } else {
+      lb = Crew.leaderboard(lbMetric);
+    }
+
     list.innerHTML = "";
-    const lb = Crew.leaderboard(lbMetric);
+    if (!lb || !lb.length) {
+      list.innerHTML = `<div class="empty-hint">${lbScope === "friends" ? "Du hast noch niemand zur Crew hinzugefügt. Suche per @username unten." : "Bestenliste ist leer."}</div>`;
+      return;
+    }
     lb.forEach((m, idx) => {
       const row = document.createElement("div");
       row.className = "lb-row" + (m.isMe ? " you" : "");
@@ -366,15 +452,21 @@ const UI = (() => {
       };
       const rankCls = idx === 0 ? "gold" : idx === 1 ? "silver" : idx === 2 ? "bronze" : "";
       const rankEmoji = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : (idx + 1);
+      const subline = m.fromCloud
+        ? (m.username ? "@" + m.username : (m.isMe ? "Du" : "Cloud"))
+        : "Stand: " + (m.t ? new Date(m.t).toLocaleDateString("de-DE") : "jetzt");
+      const removeBtn = m.isMe ? "" : (m.fromCloud
+        ? (lbScope === "friends" ? `<button class="lb-mini-btn" data-action="remove-cloud-friend" data-uid="${escapeAttr(m.id)}">×</button>` : "")
+        : `<button class="lb-mini-btn" data-action="remove-crew" data-id="${escapeAttr(m.id)}">×</button>`);
       row.innerHTML = `
         <div class="lb-rank ${rankCls}">${rankEmoji}</div>
         <div class="lb-avatar">${escape(m.a)}</div>
         <div class="lb-info">
           <div class="lb-name">${escape(m.n)}${m.isMe ? " (Du)" : ""}</div>
-          <div class="lb-rank-name">Stand: ${m.t ? new Date(m.t).toLocaleDateString("de-DE") : "jetzt"}</div>
+          <div class="lb-rank-name">${escape(subline)}</div>
         </div>
         <div class="lb-value">${valueByMetric[lbMetric] || valueByMetric.xp}</div>
-        ${m.isMe ? "" : `<div class="lb-actions"><button class="lb-mini-btn" data-action="remove-crew" data-id="${escapeAttr(m.id)}">×</button></div>`}`;
+        ${removeBtn ? `<div class="lb-actions">${removeBtn}</div>` : ""}`;
       list.appendChild(row);
     });
   }

@@ -53,6 +53,9 @@
         <button class="btn btn-ghost" data-action="goto" data-view="profile" title="Profil">
           <span id="profile-avatar">🚤</span>
         </button>
+        <button class="btn btn-ghost btn-account hidden" id="btn-account" data-action="open-account" title="Account">
+          <span id="account-icon">👤</span>
+        </button>
       </div>
     </div>
   </header>
@@ -383,13 +386,76 @@
     </div>
   </div>
 
+  <!-- Account modal -->
+  <div class="modal hidden" id="account-modal">
+    <div class="modal-content account-modal-content">
+      <button class="modal-close" data-action="close-account">✕</button>
+
+      <!-- Logged-out view -->
+      <div id="account-login-view">
+        <h3>🔐 Anmelden oder Konto erstellen</h3>
+        <p class="muted">Mit einem Account funktioniert dein Fortschritt auf jedem Gerät und du landest in der Live-Bestenliste.</p>
+
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-auth-tab="signin">Einloggen</button>
+          <button class="auth-tab" data-auth-tab="signup">Registrieren</button>
+        </div>
+
+        <div class="auth-pane" id="auth-pane-signin">
+          <label>E-Mail<input type="email" id="auth-email" placeholder="du@example.com"></label>
+          <label>Passwort<input type="password" id="auth-pw" placeholder="••••••••"></label>
+          <button class="btn btn-primary btn-lg btn-full" data-action="auth-signin">Einloggen</button>
+          <button class="link" data-action="auth-reset">Passwort vergessen?</button>
+        </div>
+
+        <div class="auth-pane hidden" id="auth-pane-signup">
+          <label>Anzeigename<input type="text" id="auth-signup-name" placeholder="z. B. Lasse" maxlength="24"></label>
+          <label>E-Mail<input type="email" id="auth-signup-email" placeholder="du@example.com"></label>
+          <label>Passwort<input type="password" id="auth-signup-pw" placeholder="mindestens 6 Zeichen"></label>
+          <button class="btn btn-primary btn-lg btn-full" data-action="auth-signup">Konto erstellen</button>
+        </div>
+
+        <div class="auth-divider"><span>oder</span></div>
+        <button class="btn btn-google btn-full" data-action="auth-google">
+          <span class="g-logo">G</span> Mit Google anmelden
+        </button>
+
+        <div class="auth-error hidden" id="auth-error"></div>
+      </div>
+
+      <!-- Logged-in view -->
+      <div id="account-info-view" class="hidden">
+        <h3>👤 Dein Account</h3>
+        <div class="account-info">
+          <div class="account-avatar" id="acc-avatar">🚤</div>
+          <div>
+            <div class="account-name" id="acc-name">…</div>
+            <div class="account-email" id="acc-email">…</div>
+            <div class="account-username" id="acc-username">…</div>
+          </div>
+        </div>
+        <label class="username-label">Username (für Crew-Suche, 3–20 Zeichen)
+          <div class="code-row">
+            <input type="text" id="acc-username-input" placeholder="z. B. lasse_skipper" maxlength="20">
+            <button class="btn btn-primary" data-action="set-username">Speichern</button>
+          </div>
+        </label>
+        <div class="auth-error hidden" id="username-error"></div>
+        <p class="muted" style="margin-top:18px">Dein Fortschritt wird automatisch in der Cloud gespeichert. Auf einem anderen Gerät einfach mit derselben E-Mail anmelden.</p>
+        <button class="btn btn-ghost btn-full" data-action="auth-signout">Abmelden</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts: order matters (questions first, then logic) -->
   <script src="data/questions.js"></script>
+  <script src="js/firebase-config.js"></script>
   <script src="js/state.js"></script>
   <script src="js/badges.js"></script>
   <script src="js/sheets.js"></script>
   <script src="js/quiz.js"></script>
   <script src="js/crew.js"></script>
+  <script src="js/cloud.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/app.js"></script>
 </body>

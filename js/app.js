@@ -16,6 +16,17 @@
     "close-modal":   ()   => closeModal(),
     "add-crew":      ()   => addCrewFromInput(),
     "remove-crew":   (el) => removeCrew(el.dataset.id),
+    "remove-cloud-friend": (el) => removeCloudFriend(el.dataset.uid),
+
+    // Auth
+    "open-account":  ()   => openAccountModal(),
+    "close-account": ()   => closeAccountModal(),
+    "auth-signin":   ()   => authSignIn(),
+    "auth-signup":   ()   => authSignUp(),
+    "auth-google":   ()   => authGoogle(),
+    "auth-signout":  ()   => authSignOut(),
+    "auth-reset":    ()   => authReset(),
+    "set-username":  ()   => setUsername(),
   };
 
   document.addEventListener("click", e => {
@@ -137,16 +148,37 @@
     document.getElementById("qr-modal").classList.add("hidden");
   }
 
-  function addCrewFromInput() {
-    const code = document.getElementById("add-code-input").value;
-    const r = Crew.add(code);
+  async function addCrewFromInput() {
+    const input = document.getElementById("add-code-input").value.trim();
     const err = document.getElementById("add-crew-error");
+    err.classList.add("hidden");
+
+    // Cloud-mode: accept @username (or plain username) for friend lookup
+    if (Cloud.enabled() && Cloud.isSignedIn() && !input.startsWith("ahoi:")) {
+      try {
+        const target = await Cloud.findUserByUsername(input);
+        if (!target) { err.textContent = "❌ Kein Account mit diesem Username gefunden."; err.classList.remove("hidden"); return; }
+        if (target.uid === Cloud.user().uid) { err.textContent = "❌ Das bist du selbst."; err.classList.remove("hidden"); return; }
+        await Cloud.addFriend(target.uid);
+        document.getElementById("add-code-input").value = "";
+        UI.toast({ type: "success", icon: "👥", title: "Zur Crew hinzugefügt", desc: `${target.name} ist jetzt in deiner Crew.` });
+        UI.confettiBurst();
+        Badges.check({ type: "crew_added" }).forEach(UI.announceBadge);
+        UI.renderCrew();
+      } catch (e) {
+        err.textContent = "❌ " + (e.message || "Fehler beim Hinzufügen.");
+        err.classList.remove("hidden");
+      }
+      return;
+    }
+
+    // Code-mode (offline)
+    const r = Crew.add(input);
     if (!r.ok) {
       err.textContent = "❌ " + r.reason;
       err.classList.remove("hidden");
       return;
     }
-    err.classList.add("hidden");
     document.getElementById("add-code-input").value = "";
     UI.toast({ type: "success", icon: "👥", title: "Crewmitglied hinzugefügt", desc: `${r.member.n} ist jetzt in deiner Crew.` });
     UI.confettiBurst();
@@ -160,8 +192,174 @@
     UI.renderCrew();
   }
 
+  async function removeCloudFriend(uid) {
+    if (!confirm("Aus deiner Crew entfernen?")) return;
+    try {
+      await Cloud.removeFriend(uid);
+      UI.renderCrew();
+    } catch (e) { console.error(e); }
+  }
+
+  // ---------- Auth ----------
+  function openAccountModal() {
+    if (!Cloud.enabled()) {
+      UI.toast({ type: "warn", icon: "⚙️", title: "Cloud nicht konfiguriert", desc: "Firebase-Config fehlt." });
+      return;
+    }
+    document.getElementById("account-modal").classList.remove("hidden");
+    refreshAccountModal();
+    // Tab switching
+    document.querySelectorAll(".auth-tab").forEach(t => {
+      t.onclick = () => {
+        document.querySelectorAll(".auth-tab").forEach(x => x.classList.remove("active"));
+        t.classList.add("active");
+        const target = t.dataset.authTab;
+        document.getElementById("auth-pane-signin").classList.toggle("hidden", target !== "signin");
+        document.getElementById("auth-pane-signup").classList.toggle("hidden", target !== "signup");
+        clearAuthError();
+      };
+    });
+  }
+
+  function refreshAccountModal() {
+    const signedIn = Cloud.isSignedIn();
+    document.getElementById("account-login-view").classList.toggle("hidden", signedIn);
+    document.getElementById("account-info-view").classList.toggle("hidden", !signedIn);
+    if (signedIn) {
+      const u = Cloud.user();
+      const s = State.get();
+      document.getElementById("acc-avatar").textContent = s.profile.avatar || "🚤";
+      document.getElementById("acc-name").textContent = s.profile.name || u.displayName || "Anonym";
+      document.getElementById("acc-email").textContent = u.email || "";
+      // Username will be shown when fetched
+      Cloud.fetchLeaderboard("xp", 1, "friends").catch(() => {}); // warm-up
+      const usernameEl = document.getElementById("acc-username");
+      usernameEl.textContent = "Username: lädt …";
+      // Try to read from cached own doc via a fetch
+      (async () => {
+        try {
+          const lb = await Cloud.fetchLeaderboard("xp", 1, "friends");
+          // We just want our own doc; the leaderboard helper includes self in friends scope.
+          const me = lb.find(d => d.uid === u.uid);
+          if (me && me.username) {
+            usernameEl.textContent = "Username: @" + me.username;
+            document.getElementById("acc-username-input").value = me.username;
+          } else {
+            usernameEl.textContent = "Noch kein Username gesetzt";
+          }
+        } catch (e) { usernameEl.textContent = ""; }
+      })();
+    }
+    clearAuthError();
+  }
+
+  function closeAccountModal() {
+    document.getElementById("account-modal").classList.add("hidden");
+  }
+
+  function showAuthError(msg) {
+    const el = document.getElementById("auth-error");
+    el.textContent = "❌ " + msg;
+    el.classList.remove("hidden");
+  }
+  function clearAuthError() {
+    const el = document.getElementById("auth-error");
+    if (el) el.classList.add("hidden");
+    const ue = document.getElementById("username-error");
+    if (ue) ue.classList.add("hidden");
+  }
+
+  function humanAuthError(e) {
+    const code = e && e.code;
+    const map = {
+      "auth/invalid-email": "Ungültige E-Mail-Adresse.",
+      "auth/user-not-found": "Kein Konto mit dieser E-Mail.",
+      "auth/wrong-password": "Falsches Passwort.",
+      "auth/invalid-credential": "E-Mail oder Passwort falsch.",
+      "auth/email-already-in-use": "Es gibt bereits ein Konto mit dieser E-Mail. Probier 'Einloggen'.",
+      "auth/weak-password": "Passwort zu schwach (mindestens 6 Zeichen).",
+      "auth/popup-closed-by-user": "Login abgebrochen.",
+      "auth/network-request-failed": "Keine Internetverbindung.",
+    };
+    return map[code] || (e && e.message) || "Unbekannter Fehler.";
+  }
+
+  async function authSignIn() {
+    clearAuthError();
+    const email = document.getElementById("auth-email").value.trim();
+    const pw = document.getElementById("auth-pw").value;
+    if (!email || !pw) { showAuthError("E-Mail und Passwort eingeben."); return; }
+    try {
+      await Cloud.signInEmail(email, pw);
+      UI.toast({ type: "success", icon: "☁️", title: "Eingeloggt!", desc: "Fortschritt wird jetzt gesynct." });
+      closeAccountModal();
+      UI.renderHUD(); UI.renderHome();
+    } catch (e) { showAuthError(humanAuthError(e)); }
+  }
+
+  async function authSignUp() {
+    clearAuthError();
+    const name = document.getElementById("auth-signup-name").value.trim();
+    const email = document.getElementById("auth-signup-email").value.trim();
+    const pw = document.getElementById("auth-signup-pw").value;
+    if (!name || !email || !pw) { showAuthError("Bitte alle Felder ausfüllen."); return; }
+    if (pw.length < 6) { showAuthError("Passwort mindestens 6 Zeichen."); return; }
+    try {
+      await Cloud.signUpEmail(email, pw, name);
+      // Update local profile name if not set
+      const s = State.get();
+      if (!s.profile.name) State.setProfile(name, s.profile.avatar || "🚤");
+      UI.toast({ type: "success", icon: "🎉", title: "Konto erstellt!", desc: "Setze einen Username, um in der Bestenliste zu erscheinen." });
+      closeAccountModal();
+      // Re-open with the logged-in view so they can set a username
+      setTimeout(openAccountModal, 600);
+      UI.renderHUD(); UI.renderHome();
+    } catch (e) { showAuthError(humanAuthError(e)); }
+  }
+
+  async function authGoogle() {
+    clearAuthError();
+    try {
+      await Cloud.signInGoogle();
+      UI.toast({ type: "success", icon: "☁️", title: "Eingeloggt!", desc: "Mit Google erfolgreich angemeldet." });
+      closeAccountModal();
+      UI.renderHUD(); UI.renderHome();
+    } catch (e) { showAuthError(humanAuthError(e)); }
+  }
+
+  async function authSignOut() {
+    if (!confirm("Wirklich abmelden? Dein Fortschritt bleibt in der Cloud erhalten.")) return;
+    await Cloud.signOut();
+    UI.toast({ type: "warn", icon: "👋", title: "Abgemeldet", desc: "Bis zum nächsten Mal!" });
+    closeAccountModal();
+    UI.renderHUD();
+  }
+
+  async function authReset() {
+    const email = document.getElementById("auth-email").value.trim();
+    if (!email) { showAuthError("E-Mail-Adresse oben eintragen."); return; }
+    try {
+      await Cloud.resetPassword(email);
+      UI.toast({ type: "success", icon: "✉️", title: "E-Mail unterwegs", desc: "Schau in dein Postfach." });
+    } catch (e) { showAuthError(humanAuthError(e)); }
+  }
+
+  async function setUsername() {
+    const ue = document.getElementById("username-error");
+    ue.classList.add("hidden");
+    const name = document.getElementById("acc-username-input").value.trim();
+    const r = await Cloud.setUsername(name);
+    if (!r.ok) {
+      ue.textContent = "❌ " + r.reason;
+      ue.classList.remove("hidden");
+      return;
+    }
+    document.getElementById("acc-username").textContent = "Username: @" + name.toLowerCase();
+    UI.toast({ type: "success", icon: "🏷️", title: "Username gespeichert", desc: "@" + name.toLowerCase() });
+  }
+
   // ---------- Init ----------
-  function init() {
+  async function init() {
     Crew.consumeUrlInvite();
     UI.renderHUD();
     UI.renderHome();
@@ -176,6 +374,16 @@
         Crew.clearPendingInvite();
       }
     }
+    // Cloud (no-op if config is null)
+    try {
+      const ok = await Cloud.init();
+      if (ok) {
+        Cloud.onAuthChange(u => {
+          UI.renderHUD();
+          if (UI.current === "crew") UI.renderCrew();
+        });
+      }
+    } catch (e) { console.error("Cloud init error", e); }
   }
 
   if (document.readyState === "loading") {

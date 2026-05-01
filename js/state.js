@@ -58,6 +58,12 @@ const State = (() => {
     try {
       localStorage.setItem(KEY, JSON.stringify(state));
     } catch (e) { console.error("state save error", e); }
+    // Mirror to cloud if signed in (debounced inside Cloud)
+    try {
+      if (typeof Cloud !== "undefined" && Cloud.enabled && Cloud.enabled() && Cloud.isSignedIn()) {
+        Cloud.pushState();
+      }
+    } catch (e) { /* swallow */ }
   }
 
   function todayStr() {
