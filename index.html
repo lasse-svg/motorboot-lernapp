@@ -15,8 +15,12 @@
   <meta name="twitter:title" content="Ahoi! — Motorboot-Lernapp">
   <meta name="twitter:description" content="Sportbootführerschein Binnen lernen mit Freunden. 253 Fragen, Prüfungssimulation, Crew-Bestenliste.">
 
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=20260503a">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E⚓%3C/text%3E%3C/svg%3E">
+  <!-- Force browsers to revalidate the HTML, so script-tag versions are picked up fresh. -->
+  <meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
 </head>
 <body>
 
@@ -447,16 +451,17 @@
     </div>
   </div>
 
-  <!-- Scripts: order matters (questions first, then logic) -->
-  <script src="data/questions.js"></script>
-  <script src="js/firebase-config.js"></script>
-  <script src="js/state.js"></script>
-  <script src="js/badges.js"></script>
-  <script src="js/sheets.js"></script>
-  <script src="js/quiz.js"></script>
-  <script src="js/crew.js"></script>
-  <script src="js/cloud.js"></script>
-  <script src="js/ui.js"></script>
-  <script src="js/app.js"></script>
+  <!-- Scripts: order matters (questions first, then logic).
+       The ?v=… query string busts caches whenever any file changes — bump on every release. -->
+  <script src="data/questions.js?v=20260503a"></script>
+  <script src="js/firebase-config.js?v=20260503a"></script>
+  <script src="js/state.js?v=20260503a"></script>
+  <script src="js/badges.js?v=20260503a"></script>
+  <script src="js/sheets.js?v=20260503a"></script>
+  <script src="js/quiz.js?v=20260503a"></script>
+  <script src="js/crew.js?v=20260503a"></script>
+  <script src="js/cloud.js?v=20260503a"></script>
+  <script src="js/ui.js?v=20260503a"></script>
+  <script src="js/app.js?v=20260503a"></script>
 </body>
 </html>
